@@ -17,18 +17,43 @@ class Query:
         self.otu_to_dna_file = otu_to_dna_file
         
     def get_otus_from_srs(self, srs_id: str) -> List[str]:
+        """
+        Get OTUs from the srs_to_otu_file for a given SRS ID.
+        Args:
+            srs_id: SRS ID to get OTUs from the srs_to_otu_file
+            
+        Returns:
+            List of OTU IDs
+        """
+        
         print(f"Getting OTUs for SRS {srs_id}")
         filters = [('srs_id', '=', srs_id)]
         table = pq.read_table(self.srs_to_otu_file, filters=filters)
         return table.to_pandas()['otu_id'].tolist()
     
     def get_dna_from_otu(self, otu_id: str) -> str:
+        """
+        Get DNA from the otu_to_dna_file for a given OTU ID.
+        Args:
+            otu_id: OTU ID to get DNA from the otu_to_dna_file
+            
+        Returns:
+            DNA sequence
+        """
         filters = [('otu_97_id', '=', otu_id)]
         table = pq.read_table(self.otu_to_dna_file, filters=filters).to_pandas()
         dna_seq = table.iloc[0]['dna_sequence']
         return dna_seq
     
     def get_dna_from_srs(self, srs_id):
+        """
+        Get DNA from the srs_to_otu_file and otu_to_dna_file for a given SRS ID.
+        Args:
+            srs_id: SRS ID to get DNA from the srs_to_otu_file and otu_to_dna_file
+            
+        Returns:
+            Dictionary of OTU IDs and DNA sequences
+        """
         print(f"Getting DNA for SRS {srs_id}")
         otus = self.get_otus_from_srs(srs_id)
         srs_dna_map = {}
@@ -39,6 +64,12 @@ class Query:
         return srs_dna_map
     
     def store_csv(self, output_dir: Path, srs_dna_map: dict):
+        """
+        Store the DNA sequences for a given SRS ID in a CSV file.
+        Args:
+            output_dir: Directory to store the CSV file
+            srs_dna_map: Dictionary of OTU IDs and DNA sequences
+        """
         output_dir.mkdir(parents=True, exist_ok=True)
         print(f"Storing CSV for SRS {self.srs_id}")
         df = pd.DataFrame(srs_dna_map.items(), columns=['otu_id', 'dna_sequence'])

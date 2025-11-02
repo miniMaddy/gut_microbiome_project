@@ -14,4 +14,4 @@ data/
 # Mapref data
 data_preprocessing/mapref_data/otus_97_to_dna.parquet
 data_preprocessing/mapref_data/samples-otus-97.parquet
-data_preprocessing/dna_sequences/
+data_preprocessing/dna_sequences/*
