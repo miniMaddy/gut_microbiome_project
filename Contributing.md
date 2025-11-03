@@ -54,8 +54,7 @@ The first step is to build the reusable components that the main scripts will re
     *   Ensure these modules are clean, well-documented, and only handle model-related logic.
 
 2.  **Address Issue \#8: Implement data loading**
-    *   Create a dedicated data module (e.g., `data_preprocessing/data_loader.py`).
-    *   Move all data-related functions (SRA ↔ MicrobeAtlas ↔ DIABIMMUNE mappings, embedding loading, sample vector building) from `data_loading.py` and `utils.py` into this new module.
+    *   Work on the `data_loading.py` file.
     *   The goal is to have a single, clean interface for retrieving processed data ready for training.
 
 ### Phase 2: Pipeline Integration
