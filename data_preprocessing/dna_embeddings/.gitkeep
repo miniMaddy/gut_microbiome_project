@@ -1,0 +1,3 @@
+# This file ensures the dna_embeddings directory is tracked by Git
+# while keeping its contents ignored (see .gitignore)
+
