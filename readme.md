@@ -39,7 +39,7 @@ The project follows a modular structure to separate concerns and facilitate coll
 | `evaluation/` | Scripts for model performance assessment, metric calculation, and visualization. |
 | `train.py` | The main entry point for running the model training pipeline. |
 | `main.py` | The overall execution script for the entire project workflow. |
-| `data_loading.py` | Utility functions for handling data I/O and alignment. |
+| `data_loading.py` | Unified data loading pipeline with automatic artifact generation (DNA CSVs, embeddings H5) and PyTorch DataLoader integration. |
 | `config.yaml` | Centralized YAML configuration file for all run parameters (data paths, model settings, evaluation metrics). |
 | `utils.py` | Helper functions including configuration loading from YAML. |
 
@@ -88,6 +88,99 @@ To set up the project environment and begin contributing:
       metrics: ["accuracy", "precision", "recall", "f1", "roc_auc"]
       cv_folds: 5
     ```
+
+## Data Loading Pipeline
+
+The `data_loading.py` module provides a unified pipeline for loading microbiome data ready for training. It automatically handles artifact generation (DNA sequences and embeddings) and provides PyTorch DataLoaders with proper batching and masking for variable-length sequences.
+
+### Quick Start
+
+```python
+from pathlib import Path
+from data_loading import get_dataloader
+
+# Simple usage - everything handled automatically
+dataloader = get_dataloader(
+    Path("data_preprocessing/datasets/sample_data.csv"),
+    batch_size=4,
+    shuffle=True
+)
+
+# Iterate over batches
+for batch in dataloader:
+    embeddings = batch['embeddings']  # (batch_size, max_otus, 384)
+    labels = batch['labels']          # (batch_size,)
+    mask = batch['mask']              # (batch_size, max_otus) - True for valid, False for padding
+    sids = batch['sids']               # List[str] - sample IDs
+```
+
+### Features
+
+- **Automatic Artifact Generation**: Automatically generates DNA CSV files and embeddings H5 when missing
+- **Caching**: Only generates missing artifacts, reuses existing ones
+- **Variable-Length Sequences**: Handles samples with different numbers of OTUs via padding and masking
+- **Config-Driven**: All paths and settings configurable via `config.yaml`
+
+### Data Format
+
+Your sample CSV file should have two columns:
+- **Sample ID column** (e.g., `sid`, `SID`, `srs_id`): Unique identifier for each sample
+- **Label column** (e.g., `label`, `Label`, `y`): Binary label (0/1) for classification
+
+Example:
+```csv
+sid,label
+DRS061545,0
+DRS061546,1
+DRS061547,0
+```
+
+### Configuration
+
+Configure data paths and embedding settings in `config.yaml`:
+
+```yaml
+data:
+  # Parquet files mapping SRS → OTU → DNA
+  srs_to_otu_parquet: "data_preprocessing/mapref_data/samples-otus-97.parquet"
+  otu_to_dna_parquet: "data_preprocessing/mapref_data/otus_97_to_dna.parquet"
+  
+  # Output directories
+  dna_csv_dir: "data_preprocessing/dna_sequences"
+  embeddings_h5: "data_preprocessing/dna_embeddings/prokbert_embeddings.h5"
+  
+  # Embedding generation settings
+  embedding_model: "neuralbioinfo/prokbert-mini-long"
+  batch_size_embedding: 32
+  device: "cpu"  # cpu, cuda, or mps
+```
+
+### Pipeline Workflow
+
+1. **Input**: Sample CSV file with SID and label columns
+2. **Step 1**: Check if DNA CSV files exist for each sample, generate missing ones
+3. **Step 2**: Check if embeddings H5 exists, generate from DNA CSVs if missing
+4. **Step 3**: Load embeddings and labels, create PyTorch Dataset
+5. **Output**: DataLoader with batched data ready for training
+
+### Advanced Usage
+
+```python
+from data_loading import MicrobiomeDataset, load_dataset
+
+# Load dataset without DataLoader
+X_list, y_list, sids_list = load_dataset(
+    Path("data_preprocessing/datasets/sample_data.csv")
+)
+
+# Create custom Dataset
+dataset = MicrobiomeDataset(
+    Path("data_preprocessing/datasets/sample_data.csv"),
+    embeddings_h5_path=None  # Auto-generates if None
+)
+```
+
+For more details, see the docstrings in `data_loading.py`.
 
     
 
