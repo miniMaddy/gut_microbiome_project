@@ -3,6 +3,15 @@
 # Data path
 data:
   dataset_path: "" # path to preprocessed data
+  # Data preprocessing paths
+  srs_to_otu_parquet: "data_preprocessing/mapref_data/samples-otus-97.parquet"
+  otu_to_dna_parquet: "data_preprocessing/mapref_data/otus_97_to_dna.parquet"
+  dna_csv_dir: "data_preprocessing/dna_sequences"
+  # embeddings_h5: "data/prokbert_embeddings.h5"
+  # Embedding generation settings
+  embedding_model: "neuralbioinfo/prokbert-mini-long"
+  batch_size_embedding: 32
+  device: "mps"  # cpu, cuda, or mps
   # ... other data args
 
 # model
