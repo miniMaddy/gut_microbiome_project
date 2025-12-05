@@ -26,6 +26,10 @@ data_preprocessing/dna_sequences/*
 data_preprocessing/dna_embeddings/*
 !data_preprocessing/dna_embeddings/.gitkeep
 
+# Microbiome embeddings - ignore all contents except .gitkeep
+data_preprocessing/microbiome_embeddings/*
+!data_preprocessing/microbiome_embeddings/.gitkeep
+
 # Content of datasets folder
 data_preprocessing/datasets/diabimmune/*
 data_preprocessing/datasets/goldberg/*
