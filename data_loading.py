@@ -18,7 +18,7 @@ from torch.utils.data import Dataset, DataLoader
 from tqdm import tqdm
 import yaml
 import os
-from utils import load_config
+from utils.data_utils import load_config
 from modules.model import MicrobiomeTransformer
 
 
