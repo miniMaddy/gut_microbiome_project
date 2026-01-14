@@ -40,12 +40,50 @@ The project follows a modular structure to separate concerns and facilitate coll
 | `data_preprocessing/dna_sequences/` | Generated DNA sequence CSVs (one per sample). |
 | `data_preprocessing/dna_embeddings/` | Generated ProkBERT embeddings (H5 format). |
 | `data_preprocessing/microbiome_embeddings/` | Generated MicrobiomeTransformer embeddings (H5 format). |
+| `huggingface_datasets/` | HuggingFace datasets with metadata and processed embeddings. |
 | `modules/` | Core model classes: `MicrobiomeTransformer` and `SKClassifier`. |
 | `utils/` | Helper utilities for data preparation and evaluation. |
 | `data_loading.py` | Unified data loading pipeline with automatic artifact generation. |
 | `generate_embeddings.py` | Standalone script for batch embedding generation. |
+| `create_unified_embeddings.py` | Script to merge all embeddings into unified files per dataset. |
+| `example_unified_embeddings.py` | Examples showing how to use unified embeddings. |
 | `main.py` | Main execution script for training and evaluation. |
 | `config.yaml` | Centralized configuration file for all parameters. |
+
+## New Feature: Unified Embeddings 🚀
+
+We've introduced a powerful feature that allows you to work with **custom sample subsets** without recomputing embeddings:
+
+### What it does:
+- **Merges** all embeddings from different months/groups into a single unified file per dataset
+- **Enables** flexible loading of any custom sample combination
+- **Eliminates** the need to recompute embeddings for each subset
+- **Speeds up** experimentation and iteration
+
+### Quick Start:
+
+```bash
+# Step 1: Generate unified embeddings (one-time setup)
+python create_unified_embeddings.py --dataset all
+
+# Step 2: Create a custom CSV with your desired samples
+# (Just list the sample IDs with labels - embeddings are already computed!)
+
+# Step 3: Set use_unified_embeddings: true in config.yaml
+
+# Step 4: Run your analysis as usual!
+python main.py
+```
+
+### Example Use Cases:
+- Isolate specific subjects from Month 1
+- Mix samples from different time points
+- Create custom train/test splits
+- Quick prototyping with small subsets
+
+📖 **For detailed instructions, see [UNIFIED_EMBEDDINGS_GUIDE.md](UNIFIED_EMBEDDINGS_GUIDE.md)**
+
+💡 **For code examples, check out [example_unified_embeddings.py](example_unified_embeddings.py)**
 
 ## Getting Started
 
