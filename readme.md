@@ -271,57 +271,144 @@ Once the datasets are pulled from HuggingFace, they should look like below:
 - `metadata/` - Folder contains the labels CSV files.
 - `processed/` - Folder contains the `dna_embeddings`, `dna_sequences` and `microbiome_embeddings` as usual.
 
-Run the main pipeline using `main.py`. There are several modes available:
+
+## Running Experiments
+
+Run the main pipeline using `main.py` with Hydra config management. All behavior is controlled via CLI arguments and config files - **no code editing required**.
+
+### Basic Usage
+
+#### Select Dataset
+```bash
+# Run with specific dataset (default: tanaka)
+python main.py datasets=gadir
+
+# Or use other datasets
+python main.py datasets=diabimmune
+python main.py datasets=goldberg
+python main.py datasets=tanaka
+```
+
+#### Enable Experiment Tracking
+```bash
+# Enable tracking to Hugging Face spaces
+python main.py datasets=gadir tracking.enabled=True
+
+# Tracking project and space_id are auto-generated from dataset name
+# Override if needed:
+python main.py datasets=gadir tracking.enabled=True tracking.space_id="custom/space-id"
+```
+
+### Evaluation Modes
 
 #### Mode 1: Simple Evaluation (No Hyperparameter Tuning)
 
-Evaluate a single classifier with default parameters:
-
-```python
-# In main.py, uncomment:
-run_evaluation(config)
-```
-
-Run:
+Evaluate classifiers with default parameters from `configs/model/model.yaml`:
 ```bash
-python main.py
+# Single classifier
+python main.py datasets=gadir model.classifier=[logreg]
+
+# Multiple classifiers
+python main.py datasets=gadir model.classifier=[logreg,rf,svm,mlp]
 ```
 
-#### Mode 2: Compare Multiple Classifiers
+#### Mode 2: Grid Search with Unbiased Evaluation (Recommended)
 
-Evaluate multiple classifiers to compare performance:
-
-```python
-# In main.py, uncomment:
-run_evaluation(config, classifiers=["logreg", "rf", "svm", "mlp"])
+Perform hyperparameter tuning with proper two-stage evaluation:
+```bash
+# Run grid search for all classifiers
+python main.py datasets=gadir model.classifier=[logreg,rf,svm,mlp]
 ```
 
-#### Mode 3: Grid Search with Unbiased Evaluation (Recommended)
+**Two-stage approach:**
+1. **Inner CV (Grid Search)**: Find best hyperparameters using 5-fold CV
+2. **Outer CV (Final Eval)**: Evaluate best model on independent 5-fold CV
 
-Perform hyperparameter tuning with proper evaluation:
+This prevents optimistic bias from hyperparameter leakage.
 
-```python
-# In main.py, uncomment:
-run_grid_search_experiment(config, classifiers=["logreg", "rf", "svm", "mlp"])
+#### Mode 3: Evaluation Only (No Training)
+
+Load existing models and evaluate:
+```bash
+python main.py datasets=gadir mode.eval_only=True
 ```
 
-This uses a two-stage approach:
-1. **Grid Search** (inner CV) - Find best hyperparameters using 5-fold CV with random_state=42
-2. **Final Evaluation** (outer CV) - Evaluate best model on fresh 5-fold CV with random_state=123
+### Advanced Usage
 
-This prevents optimistic bias when you don't have a held-out test set.
+#### Override Hyperparameter Grids
 
-#### Mode 4: Custom Hyperparameter Grid
-
-Override the config with custom hyperparameters:
-
-```python
-custom_grids = {
-    "logreg": {"C": [0.01, 0.1, 1], "penalty": ["l2"], "solver": ["lbfgs"]},
-    "rf": {"n_estimators": [100, 200], "max_depth": [10, 20]}
-}
-run_grid_search_experiment(config, custom_param_grids=custom_grids)
+Modify search space via CLI:
+```bash
+# Override specific classifier params
+python main.py datasets=gadir \
+  model.param_grids.logreg.C=[0.01,0.1,1] \
+  model.param_grids.rf.n_estimators=[100,200]
 ```
+
+#### Customize Evaluation Settings
+```bash
+# Change CV folds
+python main.py datasets=gadir evaluation.cv_folds=10
+
+# Change scoring metric
+python main.py datasets=gadir evaluation.grid_search_scoring="f1"
+
+# Set random seeds for reproducibility
+python main.py datasets=gadir \
+  evaluation.grid_search_random_state=42 \
+  evaluation.final_eval_random_state=123
+```
+
+#### View Current Config
+
+Verify your config without running experiments:
+```bash
+# Print full resolved config
+python main.py datasets=gadir --cfg job
+
+# Print only specific sections
+python main.py datasets=gadir --cfg job --package data
+```
+
+### Common Workflows
+
+**Quick experiment on new dataset:**
+```bash
+python main.py datasets=gadir model.classifier=[logreg,rf] tracking.enabled=True
+```
+
+**Full evaluation with tracking:**
+```bash
+python main.py datasets=diabimmune \
+  model.classifier=[logreg,rf,svm,mlp] \
+  tracking.enabled=True \
+  tracking.tags=[diabimmune,production,full-grid]
+```
+
+**Debug with single classifier:**
+```bash
+python main.py datasets=tanaka \
+  model.classifier=[logreg] \
+  evaluation.cv_folds=2
+```
+
+### Config Structure
+```
+configs/
+├── base.yaml           # Base settings, tracking templates
+├── data/
+│   └── data.yaml      # Data paths, embedding settings
+├── datasets/          # Dataset-specific configs
+│   ├── diabimmune.yaml
+│   ├── gadir.yaml
+│   ├── goldberg.yaml
+│   └── tanaka.yaml
+└── model/
+    └── model.yaml     # Classifier configs and param grids
+```
+
+**No code editing needed** - control everything via config files and CLI overrides.
+
 
 ### Step 3: View Results
 
