@@ -12,7 +12,28 @@ wheels/
 # Virtual environments
 .venv
 
-data/
+# Hydra outputs
+outputs/
+
+# Ruff cache
+.ruff_cache/
+
+# mypy cache
+.mypy_cache/
+
+# Pyre type checker cache
+.pyre/
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+.nox/
+.tox/
+.pytest_cache/
+
+# Data directory
+/data/
 
 # Mapref data
 data_preprocessing/mapref_data/otus_97_to_dna.parquet
