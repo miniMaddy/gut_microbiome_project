@@ -333,6 +333,70 @@ Load existing models and evaluate:
 python main.py datasets=gadir mode.eval_only=True
 ```
 
+#### Mode 4: Train/Test Split Evaluation
+
+Instead of evaluating on the full dataset with cross-validation, you can hold out a test set. The split behavior is controlled by the `evaluation.split.mode` setting:
+
+| Split Mode | Description |
+| :--- | :--- |
+| `none` | No train/test split. Uses full dataset with cross-validation (default). |
+| `auto` | Automatically split the dataset into train/test using stratified sampling. |
+| `manual` | Use pre-defined train/test CSV files. |
+
+**Auto split** — the dataset is automatically split into train and test using stratified sampling that preserves class balance:
+
+```bash
+# Auto split with default 70/30 ratio
+python main.py datasets=tanaka evaluation.split.mode=auto
+
+# Custom split ratio and seed
+python main.py datasets=tanaka evaluation.split.mode=auto \
+    evaluation.split.auto.test_size=0.2 \
+    evaluation.split.auto.random_state=42
+
+# Eval only (no grid search) — useful when hyperparams are already known
+python main.py datasets=tanaka evaluation.split.mode=auto mode.eval_only=true
+```
+
+**Manual split** — provide two separate CSV files for train and test:
+
+```bash
+python main.py evaluation.split.mode=manual \
+    evaluation.split.manual.train_dataset_path=data/train.csv \
+    evaluation.split.manual.test_dataset_path=data/test.csv
+```
+
+Manual mode includes automatic validation checks:
+- Schema alignment (same columns in both files)
+- Data leakage detection (no overlapping sample IDs)
+- Label distribution comparison (warns if distributions differ significantly)
+
+**Behavior summary:**
+
+| `split.mode` | `eval_only` | What happens |
+| :--- | :--- | :--- |
+| `none` | `false` | Default: GridSearchCV + final CV on full dataset |
+| `none` | `true` | Simple k-fold CV on full dataset |
+| `auto` | `false` | GridSearchCV on train set + holdout test evaluation |
+| `auto` | `true` | Fit on train set + holdout test evaluation (no grid search) |
+| `manual` | `false` | GridSearchCV on train set + holdout test evaluation |
+| `manual` | `true` | Fit on train set + holdout test evaluation (no grid search) |
+
+**Config reference** (`configs/base.yaml`):
+
+```yaml
+evaluation:
+  split:
+    # Split mode: "none", "auto", or "manual"
+    mode: "none"
+    auto:
+      test_size: 0.3           # fraction held out for testing
+      random_state: 20260101   # seed for reproducible splits
+    manual:
+      train_dataset_path: null # path to train CSV
+      test_dataset_path: null  # path to test CSV
+```
+
 ### Advanced Usage
 
 #### Override Hyperparameter Grids
