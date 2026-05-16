@@ -8,16 +8,24 @@ from sklearn.pipeline import Pipeline
 from sklearn.model_selection import StratifiedKFold, cross_val_predict
 from sklearn.metrics import classification_report
 from sklearn.model_selection import GridSearchCV
-import joblib
-import numpy as np
-from typing import Dict, Any
-from utils.evaluation_utils import EvaluationMetrics
 from omegaconf import DictConfig
 from rich.console import Console
+import joblib
+import numpy as np
+from typing import Any, Dict, Optional
+from utils.evaluation_utils import EvaluationMetrics
+from xgboost import XGBClassifier  # type: ignore[import-untyped]
 
 
 class SKClassifier:
     """Scikit-learn based classifier with cross-validation and grid search."""
+
+    XGBOOST_DEFAULT_PARAMS = {
+        "eval_metric": "logloss",
+        "n_jobs": -1,
+        "random_state": 42,
+        "verbosity": 0,
+    }
 
     # Mapping of classifier types to their names
     CLASSIFIER_NAMES = {
@@ -25,10 +33,14 @@ class SKClassifier:
         "rf": "Random Forest",
         "svm": "SVM",
         "mlp": "MLP",
+        "xgb": "XGBoost",
     }
 
     def __init__(
-        self, classifier_type: str, config: DictConfig, console: Console = None
+        self,
+        classifier_type: str,
+        config: DictConfig,
+        console: Optional[Console] = None,
     ):
         self.classifier_type = classifier_type
         self.config = config
@@ -55,7 +67,7 @@ class SKClassifier:
         """Set the pipeline (for compatibility)."""
         self.pipeline = value
 
-    def _init_base_classifier(self, params: Dict[str, Any] = None):
+    def _init_base_classifier(self, params: Optional[Dict[str, Any]] = None):
         """Initialize the base classifier with optional parameters."""
         params = params or {}
 
@@ -68,10 +80,15 @@ class SKClassifier:
             return SVC(probability=True, **params)
         elif self.classifier_type == "mlp":
             return MLPClassifier(**params)
+        elif self.classifier_type == "xgb":
+            xgb_params = {**self.XGBOOST_DEFAULT_PARAMS, **params}
+            return XGBClassifier(**xgb_params)
         else:
             raise ValueError(f"Unknown classifier type: {self.classifier_type}")
 
-    def _init_pipeline(self, classifier_params: Dict[str, Any] = None):
+    def _init_pipeline(
+        self, classifier_params: Optional[Dict[str, Any]] = None
+    ) -> Pipeline:
         """Initialize pipeline with optional StandardScaler."""
         base_clf = self._init_base_classifier(classifier_params)
 
@@ -310,7 +327,7 @@ class SKClassifier:
         y_train: np.ndarray,
         X_test: np.ndarray,
         y_test: np.ndarray,
-        param_grid: Dict[str, Any] = None,
+        param_grid: Optional[Dict[str, Any]] = None,
         grid_search_cv: int = 5,
         scoring: str = "roc_auc",
         grid_search_random_state: int = 42,
@@ -430,9 +447,7 @@ class SKClassifier:
             self.console.print(
                 f"\nHoldout Test Set Classification Report:", style="bold"
             )
-            self.console.print(
-                classification_report(y_test, y_pred), style="cyan"
-            )
+            self.console.print(classification_report(y_test, y_pred), style="cyan")
             if metrics.roc_auc is not None:
                 self.console.print(
                     f"ROC-AUC Score: {metrics.roc_auc:.4f}", style="bold magenta"

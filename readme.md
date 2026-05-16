@@ -19,7 +19,7 @@ Accumulating scientific evidence highlights the critical role of the gut microbi
 Our approach is built on a modern, two-stage machine learning architecture designed to handle the complexity and high dimensionality of microbiome data:
 
 1.  **Microbiome Embedding Model:** We utilize a recently developed **foundation model** for microbiome data. This model serves as a backbone, extracting rich, low-dimensional, and meaningful representations (embeddings) from raw 16S rRNA or shotgun metagenomics data.
-2.  **Classifier Head:** The extracted embeddings are then fed into a simpler machine learning model, such as **Logistic Regression** or a similar classifier, to perform the final binary prediction.
+2.  **Classifier Head:** The extracted embeddings are then fed into a downstream classifier such as **Logistic Regression**, **Random Forest**, **SVM**, **MLP**, or **XGBoost** to perform the final binary prediction.
 
 ### Evaluation Strategy
 
@@ -155,7 +155,7 @@ data:
   device: "cpu"
 
 model:
-  # Classifier type: "logreg", "rf", "svm", or "mlp"
+  # Classifier type: "logreg", "rf", "svm", "mlp", or "xgb"
   classifier: "logreg"
   use_scaler: true
 
@@ -316,7 +316,7 @@ Evaluate classifiers with default parameters from `configs/model/model.yaml`:
 python main.py datasets=gadir model.classifier=[logreg]
 
 # Multiple classifiers
-python main.py datasets=gadir model.classifier=[logreg,rf,svm,mlp]
+python main.py datasets=gadir model.classifier=[logreg,rf,svm,mlp,xgb]
 ```
 
 #### Mode 2: Grid Search with Unbiased Evaluation (Recommended)
@@ -324,7 +324,7 @@ python main.py datasets=gadir model.classifier=[logreg,rf,svm,mlp]
 Perform hyperparameter tuning with proper two-stage evaluation:
 ```bash
 # Run grid search for all classifiers
-python main.py datasets=gadir model.classifier=[logreg,rf,svm,mlp]
+python main.py datasets=gadir model.classifier=[logreg,rf,svm,mlp,xgb]
 ```
 
 **Two-stage approach:**
@@ -451,7 +451,7 @@ python main.py datasets=gadir model.classifier=[logreg,rf] tracking.enabled=True
 **Full evaluation with tracking:**
 ```bash
 python main.py datasets=diabimmune \
-  model.classifier=[logreg,rf,svm,mlp] \
+  model.classifier=[logreg,rf,svm,mlp,xgb] \
   tracking.enabled=True \
   tracking.tags=[diabimmune,production,full-grid]
 ```
