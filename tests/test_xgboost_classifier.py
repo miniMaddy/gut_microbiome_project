@@ -24,11 +24,11 @@ class XGBoostClassifierTests(unittest.TestCase):
     def test_xgb_pipeline_uses_xgboost_estimator(self) -> None:
         """The xgb classifier type should instantiate an XGBClassifier."""
         classifier = SKClassifier("xgb", self._make_config(), console=self.CONSOLE)
+        xgb_estimator = classifier.pipeline.named_steps["classifier"]
 
         self.assertEqual(classifier.name, "XGBoost (scaled)")
-        self.assertIsInstance(
-            classifier.pipeline.named_steps["classifier"], XGBClassifier
-        )
+        self.assertIsInstance(xgb_estimator, XGBClassifier)
+        self.assertEqual(xgb_estimator.get_params()["n_jobs"], 1)
 
     def test_xgb_fit_and_predict_proba(self) -> None:
         """XGBoost should fit and emit binary class probabilities."""

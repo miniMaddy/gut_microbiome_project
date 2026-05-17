@@ -22,7 +22,9 @@ class SKClassifier:
 
     XGBOOST_DEFAULT_PARAMS = {
         "eval_metric": "logloss",
-        "n_jobs": -1,
+        # Keep estimator-level parallelism single-threaded so GridSearchCV can
+        # safely own cross-validation parallelism without nested oversubscription.
+        "n_jobs": 1,
         "random_state": 42,
         "verbosity": 0,
     }
