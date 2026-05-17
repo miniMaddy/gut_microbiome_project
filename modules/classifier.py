@@ -3,6 +3,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 from sklearn.neural_network import MLPClassifier
+from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import StratifiedKFold, cross_val_predict
@@ -50,6 +51,7 @@ class SKClassifier:
         self.use_scaler = config.model.use_scaler
         self.pipeline = self._init_pipeline()
         self.best_params = None
+        self.label_encoder: Optional[LabelEncoder] = None
 
     @property
     def name(self) -> str:
@@ -126,6 +128,38 @@ class SKClassifier:
                 f"found in both train and test sets. Did you split BEFORE preprocessing?"
             )
 
+    def _uses_label_encoding(self) -> bool:
+        """Return whether the active classifier requires numeric labels."""
+        return self.classifier_type == "xgb"
+
+    def _fit_label_encoder(self, y: np.ndarray) -> np.ndarray:
+        """Fit a label encoder when required and return transformed labels."""
+        if not self._uses_label_encoding():
+            return y
+
+        self.label_encoder = LabelEncoder()
+        return self.label_encoder.fit_transform(y)
+
+    def _transform_labels(self, y: np.ndarray) -> np.ndarray:
+        """Transform labels using the fitted encoder when required."""
+        if not self._uses_label_encoding():
+            return y
+
+        if self.label_encoder is None:
+            raise ValueError("Label encoder has not been fitted for XGBoost labels.")
+
+        return self.label_encoder.transform(y)
+
+    def _decode_labels(self, y: np.ndarray) -> np.ndarray:
+        """Decode model predictions back to the original label space."""
+        if not self._uses_label_encoding():
+            return y
+
+        if self.label_encoder is None:
+            raise ValueError("Label encoder has not been fitted for XGBoost labels.")
+
+        return self.label_encoder.inverse_transform(y.astype(int))
+
     def set_params(self, **params):
         """Set classifier parameters and reinitialize pipeline."""
         self.pipeline = self._init_pipeline(params)
@@ -153,15 +187,19 @@ class SKClassifier:
             EvaluationMetrics object containing all evaluation results
         """
         skf = StratifiedKFold(n_splits=cv, shuffle=True, random_state=random_state)
+        y_encoded = self._fit_label_encoder(y)
 
         # Get predictions using pipeline
-        y_pred = cross_val_predict(self.pipeline, X, y, cv=skf, method="predict")
+        y_pred = cross_val_predict(
+            self.pipeline, X, y_encoded, cv=skf, method="predict"
+        )
+        y_pred = self._decode_labels(y_pred)
 
         # Get probability predictions (for ROC-AUC)
         y_prob = None
         try:
             y_prob_all = cross_val_predict(
-                self.pipeline, X, y, cv=skf, method="predict_proba"
+                self.pipeline, X, y_encoded, cv=skf, method="predict_proba"
             )
             # For binary classification, take probability of positive class
             if y_prob_all.shape[1] == 2:
@@ -272,7 +310,8 @@ class SKClassifier:
             verbose=1 if verbose else 0,
         )
 
-        grid_search.fit(X, y)
+        y_encoded = self._fit_label_encoder(y)
+        grid_search.fit(X, y_encoded)
 
         # Get best params and remove pipeline prefix for clean storage
         best_params_prefixed = grid_search.best_params_
@@ -397,7 +436,8 @@ class SKClassifier:
                 verbose=1 if verbose else 0,
             )
 
-            grid_search.fit(X_train, y_train)
+            y_train_encoded = self._fit_label_encoder(y_train)
+            grid_search.fit(X_train, y_train_encoded)
 
             best_params = self._unprefix_params(grid_search.best_params_)
             best_score = grid_search.best_score_
@@ -420,9 +460,11 @@ class SKClassifier:
                 style="bold",
             )
 
-        self.pipeline.fit(X_train, y_train)
+        y_train_encoded = self._fit_label_encoder(y_train)
+        self.pipeline.fit(X_train, y_train_encoded)
 
         y_pred = self.pipeline.predict(X_test)
+        y_pred = self._decode_labels(y_pred)
         y_prob = None
         try:
             y_prob_all = self.pipeline.predict_proba(X_test)
@@ -460,26 +502,39 @@ class SKClassifier:
     def fit(self, X: np.ndarray, y: np.ndarray) -> None:
         """Fit the pipeline on training data."""
         self.console.print(f"Fitting {self.name}...", style="bold green")
-        self.pipeline.fit(X, y)
+        y_encoded = self._fit_label_encoder(y)
+        self.pipeline.fit(X, y_encoded)
         self.console.print("Pipeline fitted.", style="success")
 
     def save_model(self, path: str) -> None:
         """Save the trained pipeline to disk."""
 
         self.console.print("Saving model...", style="info")
-        joblib.dump(self.pipeline, path)
+        joblib.dump(
+            {
+                "pipeline": self.pipeline,
+                "label_encoder": self.label_encoder,
+            },
+            path,
+        )
         self.console.print(f"Model saved to {path}", style="path")
 
     def load_model(self, path: str) -> None:
         """Load a trained pipeline from disk."""
 
         self.console.print(f"Loading model from {path}...", style="info")
-        self.pipeline = joblib.load(path)
+        model_bundle = joblib.load(path)
+        if isinstance(model_bundle, dict) and "pipeline" in model_bundle:
+            self.pipeline = model_bundle["pipeline"]
+            self.label_encoder = model_bundle.get("label_encoder")
+        else:
+            self.pipeline = model_bundle
+            self.label_encoder = None
         self.console.print("Model loaded.", style="path")
 
     def predict(self, X: np.ndarray) -> np.ndarray:
         """Make predictions on new data."""
-        return self.pipeline.predict(X)
+        return self._decode_labels(self.pipeline.predict(X))
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         """Get probability predictions on new data."""

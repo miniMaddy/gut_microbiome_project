@@ -1,7 +1,9 @@
 """Regression tests for XGBoost classifier support."""
 
+import tempfile
 import unittest
 
+import numpy as np
 from omegaconf import OmegaConf
 from rich.console import Console
 from rich.theme import Theme
@@ -57,6 +59,42 @@ class XGBoostClassifierTests(unittest.TestCase):
 
         self.assertEqual(probabilities.shape, (40, 2))
         self.assertTrue(((probabilities >= 0.0) & (probabilities <= 1.0)).all())
+
+    def test_xgb_encodes_and_decodes_string_labels(self) -> None:
+        """XGBoost should support the project's non-numeric string labels."""
+        features, labels = make_classification(
+            n_samples=40,
+            n_features=6,
+            n_informative=4,
+            n_redundant=0,
+            random_state=11,
+        )
+        string_labels = np.where(labels == 1, "healthy", "allergic")
+
+        classifier = SKClassifier("xgb", self._make_config(), console=self.CONSOLE)
+        classifier.set_params(
+            n_estimators=8,
+            max_depth=2,
+            learning_rate=0.3,
+            random_state=11,
+            n_jobs=1,
+            verbosity=0,
+        )
+        classifier.fit(features, string_labels)
+
+        predictions = classifier.predict(features)
+
+        self.assertEqual(set(predictions), {"healthy", "allergic"})
+        self.assertEqual(predictions.dtype.kind, "U")
+
+        with tempfile.NamedTemporaryFile(suffix=".joblib") as model_file:
+            classifier.save_model(model_file.name)
+            restored = SKClassifier("xgb", self._make_config(), console=self.CONSOLE)
+            restored.load_model(model_file.name)
+
+            restored_predictions = restored.predict(features)
+
+        self.assertTrue(np.array_equal(predictions, restored_predictions))
 
     def test_model_config_includes_xgb_defaults(self) -> None:
         """The default model config should expose XGBoost selection and tuning."""
