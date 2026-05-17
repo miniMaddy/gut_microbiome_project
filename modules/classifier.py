@@ -1,8 +1,9 @@
 # Classifier module integrating foundation model and classification head
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.svm import SVC
 from sklearn.neural_network import MLPClassifier
+from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import StratifiedKFold, cross_val_predict
@@ -10,7 +11,7 @@ from sklearn.metrics import classification_report
 from sklearn.model_selection import GridSearchCV
 import joblib
 import numpy as np
-from typing import Dict, Any
+from typing import Any, Dict, Optional
 from utils.evaluation_utils import EvaluationMetrics
 from omegaconf import DictConfig
 from rich.console import Console
@@ -23,12 +24,16 @@ class SKClassifier:
     CLASSIFIER_NAMES = {
         "logreg": "Logistic Regression",
         "rf": "Random Forest",
+        "dt": "Decision Tree",
         "svm": "SVM",
         "mlp": "MLP",
     }
 
     def __init__(
-        self, classifier_type: str, config: DictConfig, console: Console = None
+        self,
+        classifier_type: str,
+        config: DictConfig,
+        console: Optional[Console] = None,
     ):
         self.classifier_type = classifier_type
         self.config = config
@@ -55,7 +60,7 @@ class SKClassifier:
         """Set the pipeline (for compatibility)."""
         self.pipeline = value
 
-    def _init_base_classifier(self, params: Dict[str, Any] = None):
+    def _init_base_classifier(self, params: Optional[Dict[str, Any]] = None):
         """Initialize the base classifier with optional parameters."""
         params = params or {}
 
@@ -63,6 +68,8 @@ class SKClassifier:
             return LogisticRegression(**params)
         elif self.classifier_type == "rf":
             return RandomForestClassifier(**params)
+        elif self.classifier_type == "dt":
+            return DecisionTreeClassifier(**params)
         elif self.classifier_type == "svm":
             # Use probability=True for ROC curve support
             return SVC(probability=True, **params)
@@ -71,7 +78,9 @@ class SKClassifier:
         else:
             raise ValueError(f"Unknown classifier type: {self.classifier_type}")
 
-    def _init_pipeline(self, classifier_params: Dict[str, Any] = None):
+    def _init_pipeline(
+        self, classifier_params: Optional[Dict[str, Any]] = None
+    ) -> Pipeline:
         """Initialize pipeline with optional StandardScaler."""
         base_clf = self._init_base_classifier(classifier_params)
 
@@ -310,7 +319,7 @@ class SKClassifier:
         y_train: np.ndarray,
         X_test: np.ndarray,
         y_test: np.ndarray,
-        param_grid: Dict[str, Any] = None,
+        param_grid: Optional[Dict[str, Any]] = None,
         grid_search_cv: int = 5,
         scoring: str = "roc_auc",
         grid_search_random_state: int = 42,
@@ -430,9 +439,7 @@ class SKClassifier:
             self.console.print(
                 f"\nHoldout Test Set Classification Report:", style="bold"
             )
-            self.console.print(
-                classification_report(y_test, y_pred), style="cyan"
-            )
+            self.console.print(classification_report(y_test, y_pred), style="cyan")
             if metrics.roc_auc is not None:
                 self.console.print(
                     f"ROC-AUC Score: {metrics.roc_auc:.4f}", style="bold magenta"

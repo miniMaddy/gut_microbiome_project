@@ -74,6 +74,7 @@ Contains the `MicrobiomeTransformer` class that wraps the pre-trained foundation
 Contains the `SKClassifier` class that provides a unified interface for multiple scikit-learn classifiers:
 - Logistic Regression (`logreg`)
 - Random Forest (`rf`)
+- Decision Tree (`dt`)
 - Support Vector Machine (`svm`)
 - Multi-Layer Perceptron (`mlp`)
 
@@ -309,7 +310,7 @@ Test with multiple datasets and classifiers:
 
 ```python
 # In main.py
-run_evaluation(config, classifiers=["logreg", "rf", "svm", "mlp"])
+run_evaluation(config, classifiers=["logreg", "rf", "dt", "svm", "mlp"])
 ```
 
 ### 5.3. Edge Cases to Test
