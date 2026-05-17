@@ -1,5 +1,5 @@
 
-classifier: [logreg, svm, rf, mlp]        # default classifier [logreg, svm, rf, mlp]
+classifier: [logreg, svm, rf, dt, mlp]    # default classifier [logreg, svm, rf, dt, mlp]
 use_scaler: true            # Apply StandardScaler before classifier
 
 param_grids:
@@ -21,6 +21,13 @@ param_grids:
     max_depth: [5, 10, 20, null]
     min_samples_split: [2, 5]
     min_samples_leaf: [1, 2]
+    class_weight: ["balanced"]
+
+  dt:
+    criterion: ["gini", "entropy"]
+    max_depth: [3, 5, 10, null]
+    min_samples_split: [2, 5, 10]
+    min_samples_leaf: [1, 2, 4]
     class_weight: ["balanced"]
 
   mlp:
