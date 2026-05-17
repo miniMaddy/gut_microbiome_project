@@ -71,11 +71,12 @@ The unified data loading pipeline that:
 Contains the `MicrobiomeTransformer` class that wraps the pre-trained foundation model for aggregating DNA embeddings into a single microbiome embedding per sample.
 
 #### `modules/classifier.py`
-Contains the `SKClassifier` class that provides a unified interface for multiple scikit-learn classifiers:
+Contains the `SKClassifier` class that provides a unified interface for multiple sklearn-compatible classifiers:
 - Logistic Regression (`logreg`)
 - Random Forest (`rf`)
 - Support Vector Machine (`svm`)
 - Multi-Layer Perceptron (`mlp`)
+- XGBoost (`xgb`)
 
 **Key Methods:**
 - `evaluate_model(X, y, cv)` - Simple cross-validation evaluation
@@ -309,7 +310,7 @@ Test with multiple datasets and classifiers:
 
 ```python
 # In main.py
-run_evaluation(config, classifiers=["logreg", "rf", "svm", "mlp"])
+run_evaluation(config, classifiers=["logreg", "rf", "svm", "mlp", "xgb"])
 ```
 
 ### 5.3. Edge Cases to Test
@@ -360,7 +361,7 @@ eval_results/
     ```
 
 2. Add to `CLASSIFIER_NAMES` mapping
-3. Add hyperparameter grid to `config.yaml`:
+3. Add hyperparameter grid to `configs/model/model.yaml`:
     ```yaml
     param_grids:
       your_new_classifier:
